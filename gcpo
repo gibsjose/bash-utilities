@@ -1,0 +1,27 @@
+#!/bin/sh
+
+# |gcpo|: compile |@program@.cpp| [...] , 'outputting' to basename of first arg.
+
+# written by Hugh McGuire
+
+if [ $# -lt 1 ]
+then
+    echo Usage:\  `basename $0` '@program@.cpp' '[...]' >&2
+    exit 1
+fi
+
+DIRNAME=`dirname "$1"`
+BASENAME_CPP=`basename "$1" .cpp`
+BASENAME=`basename "$1"`
+
+if [ "${BASENAME_CPP}.cpp" != "${BASENAME}" ]
+then
+    echo Usage:\  `basename $0` '@program@.cpp' '[...]' >&2
+    exit 1
+fi
+
+# if debugging:
+set -x                  # seems nice even if not debugging
+# set -v
+
+g++ -std=c++11 -Wall -g "$@" -lm -o "$DIRNAME/$BASENAME_CPP"

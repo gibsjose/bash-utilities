@@ -1,0 +1,3 @@
+#!/bin/bash
+
+echo `netstat -nr | grep default | tr -s ' ' | cut -f2 -d' '`

@@ -1,0 +1,233 @@
+#!/bin/bash
+# topchrono 1.0.0
+
+#######################################################
+################## CUSTOM PARAMETERS ##################
+#######################################################
+
+refreshTime="0.02"
+
+keptDateFile="keptTimes.tpc"
+
+#######################################################
+############# END OF CUSTOM PARAMETERS ################
+#######################################################
+
+getDate() {
+	
+	centiseconds="$(($1/10000000%10))"
+	deciseconds="$(($1/100000000%10))"
+	seconds="$(($1/1000000000%10))"
+	decaseconds="$(($1/10000000000%6))"
+	minutes="$(($1/60000000000%10))"
+	decaminutes="$(($1/600000000000%6))"
+	hours="$(($1/3600000000000%10))"
+	decahours="$(($1/36000000000000))"
+	
+	echo "$decahours$hours:$decaminutes$minutes:$decaseconds$seconds.$deciseconds$centiseconds"
+	
+}
+
+#######################################################
+############### HERE BEGINS THE SCRIPT ################
+#######################################################
+
+# Disable the stop when reading input keys.
+stty -echo -icanon time 0 min 0
+
+trap "stty sane;exit 1" SIGTERM SIGINT
+#-
+
+# Setup initial loop conditions.
+run="false"
+key="r"
+i="1"
+#-
+
+# At each refresh time...
+while [ "1" ]; do
+	
+	# If the [s] key is pressed...
+	if [ "$key" == "s" ]; then
+		
+		# And if the stopwatch is stopped...
+		if [ "$run" == "false" ]; then
+			
+			# Start it.
+			if [ "$timePause" == "" ]; then
+				
+				timeInit="$(date +%s%N)"
+				
+			
+			else
+				
+				timeInit="$(($timeInit+$(date +%s%N)-$timePause))"
+				
+			fi
+			
+			run="true"
+			#-
+			
+		#-
+		
+		# But if the stopwatch is running...
+		else
+			
+			# Stop it.
+			timePause="$(date +%s%N)"
+			
+			run="false"
+			#-
+			
+		fi
+		#-
+		
+	#-
+	
+	# If the [q] key is pressed when the stopwatch is stopped...
+	elif [ "$key" == "q" -a "$run" == "false" ]; then
+		
+		# Quit topchrono.
+		break
+		#-
+		
+	#-
+	
+	# If the [r] key is pressed whent the stopwatch is stopped...
+	elif [ "$key" == "r" -a "$run" == "false" ]; then
+		
+		# Reset it.
+		date="00:00:00.00"
+		
+		timePause=""
+		previousTime=""
+		keptDates=""
+		
+		i="1"
+		#-
+		
+	#-
+	
+	# If the [k] key is pressed after the stopwatch was started...
+	elif [ "$key" == "k" -a "$date" != "00:00:00.00" ]; then
+		
+		# Calculate the delta time.
+		if [ "$previousTime" ]; then
+			
+			deltaTime="$(echo "$now - $previousTime" | bc)"
+			
+			deltaDate=`getDate $deltaTime`
+			
+		else
+			
+			deltaDate="$date"
+			
+		fi
+		#-
+		
+		# Add the time to the kept time list.
+		keptDates="${keptDates}$i\t$date\t$deltaDate\n"
+		
+		previousTime="$now"
+		#-
+		
+		# Increment the kept time indice.
+		i="$((i+1))"
+		#-
+		
+	#-
+	
+	# If the [f] key is pressed...
+	elif [ "$key" == "f" ]; then
+		
+		# Write the kept times in a file.
+		echo -e "$keptDates" > $keptDateFile
+		#-
+		
+	#-
+	
+	# If the [h] key is pressed...
+	elif [ "$key" == "h" ]; then
+		
+		# And if the help is not displayed...
+		if [ "$help" == "" ]; then
+			
+			# Display it.
+			help="[s] Start/Pause    [k] Keep time    [r] Reset    [f] Save times in file    [+]/[-] Decrease/Increase refresh time    [h] Help    [q] Quit"
+			#-
+			
+		#-
+		
+		# But if the help message is already displayed...
+		else
+			
+			# Hide it.
+			help=""
+			#-
+			
+		fi
+		#-
+		
+	#-
+	
+	# If the [+] key is pressed...
+	elif [ "$key" == "+" ]; then
+		
+		# Increase the refresh time.
+		refreshTime="$(echo "$refreshTime + 0.01" | bc)"
+		#-
+		
+	#-
+	
+	# If the [-] key is pressed...
+	elif [ "$key" == "-" ]; then
+		
+		# Decrease the refresh time.
+		refreshTime="$(echo "$refreshTime - 0.01" | bc)"
+		#-
+		
+	fi
+	#-
+	
+	# If the stopwatch is running...
+	if [ "$run" == "true" ]; then
+		
+		# Get the instant time
+		now="$(($(date +%s%N)-$timeInit))"
+		
+		date=`getDate $now`
+		#-
+		
+	fi
+	#-
+	
+	# Clear the terminal.
+	printf "\033c"
+	#-
+	
+	# Display the data in the terminal.
+	echo "$help"
+	echo ""
+	echo -e "   \033[1m$date\033[0m"
+	echo ""
+	echo -e "$keptDates"
+	#-
+	
+	# Wait during the refresh time.
+	sleep $refreshTime
+	#-
+	
+	# Read the key pressed by the user.
+	read key
+	#-
+	
+done
+#-
+
+# Reset the terminal input configuration.
+stty sane
+#-
+
+# We did it! Phew...
+exit 0
+#-

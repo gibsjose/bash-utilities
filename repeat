@@ -1,0 +1,16 @@
+#!/bin/bash
+
+if [ $# -lt 2 ]
+then
+    printf '\ausage:  %s <command> n\n' `basename $0` >&2
+    exit 2
+fi
+
+C=$1
+N=$2
+shift
+while [ $N -gt 0 ]
+do
+    eval "$C"
+    N=`expr $N - 1`
+done
